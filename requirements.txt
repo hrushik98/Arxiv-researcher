@@ -12,3 +12,4 @@ pypdf
 pytesseract
 unstructured_pytesseract
 unstructured_inference
+opencv-python
