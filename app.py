@@ -12,7 +12,7 @@ import chromadb
 from openai import OpenAI
 import langchain
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import FAISS
 from langchain.text_splitter import TokenTextSplitter
 from langchain.document_loaders import UnstructuredPDFLoader, OnlinePDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -51,8 +51,7 @@ else:
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
         texts = text_splitter.split_documents(data)
         embeddings = OpenAIEmbeddings(openai_api_key = api_key)
-        vectordb = Chroma.from_documents(texts, embeddings, persist_directory="/content/embeddings")
-        vectordb.persist()
+        vectorstore = FAISS.from_texts(texts=[t.page_content for t in texts], embedding=embeddings)
     
     if "openai_model" not in st.session_state:
         st.session_state["openai_model"] = "gpt-3.5-turbo"
@@ -65,7 +64,7 @@ else:
             st.markdown(message["content"])
 
     if prompt := st.chat_input("Enter your query"):
-        docs = vectordb.similarity_search(prompt, 4)
+        docs = vectorstore.similarity_search(query, 4)
         system_content = f"""
         You are a helpful assistant performing Retrieval-augmented generation (RAG).
         You will be given a user query and some text. 
