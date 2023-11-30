@@ -1,3 +1,5 @@
+
+libsqlite3-dev
 pysqlite3
 openai
 chromadb
