@@ -1,0 +1,13 @@
+openai
+chromadb
+langchain
+tiktoken
+pdfminer.six
+pdf2image
+arxiv-downloader
+pikepdf
+unstructured
+pypdf
+pytesseract
+unstructured_pytesseract
+unstructured_inference
