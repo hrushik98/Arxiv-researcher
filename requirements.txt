@@ -2,6 +2,7 @@ openai
 langchain
 tiktoken
 pdfminer.six
+faiss-cpu
 pdf2image
 arxiv-downloader
 pikepdf
@@ -11,3 +12,4 @@ pytesseract
 unstructured_pytesseract
 unstructured_inference
 opencv-python
+
