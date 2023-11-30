@@ -1,6 +1,6 @@
 openai
 db-sqlite3
-chromadb
+chromadb==0.3.29
 langchain
 tiktoken
 pdfminer.six
