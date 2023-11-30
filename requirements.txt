@@ -1,5 +1,5 @@
-openai
 pysqlite3
+openai
 chromadb
 langchain
 tiktoken
