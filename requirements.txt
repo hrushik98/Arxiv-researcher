@@ -1,7 +1,7 @@
 openai
 chromadb
 langchain
-pysqlite3
+db-sqlite3
 tiktoken
 pdfminer.six
 pdf2image
