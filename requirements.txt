@@ -1,6 +1,7 @@
 openai
 chromadb
 langchain
+pysqlite3
 tiktoken
 pdfminer.six
 pdf2image
