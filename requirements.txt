@@ -1,4 +1,3 @@
-pysqlite3
 openai
 chromadb
 langchain
