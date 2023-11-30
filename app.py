@@ -8,7 +8,6 @@ import os
 import subprocess
 import platform
 import openai
-import chromadb
 from openai import OpenAI
 import langchain
 from langchain.embeddings.openai import OpenAIEmbeddings
