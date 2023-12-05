@@ -29,7 +29,7 @@ if st.button("New Chat"):
     os.mkdir("pdfs")
     os.mkdir("embeddings")
 st.title("ARXIV Researcher")
-st.write("Get AI powered insights for your research paper")
+st.write("Chat with any Arxiv research paper")
 api_key = st.text_input("Enter your OpenAI API key", type = "password")
 client = OpenAI(api_key = api_key)
 link = st.text_input("Enter the link to your research paper")
