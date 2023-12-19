@@ -24,4 +24,4 @@ streamlit run app.py
 ```
 
 # Demo
-[![Alt text](https://img.youtube.com/vi/j7s0k7zqTXM/0.jpg)](https://www.youtube.com/watch?v=j7s0k7zqTXM)
+[Watch the demo on youtube](https://www.youtube.com/watch?v=j7s0k7zqTXM&feature=youtu.be)
