@@ -1,7 +1,4 @@
-# __import__('pysqlite3')
-# import sys
-# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-# import sqlite3
+
 
 import streamlit as st
 import os
@@ -63,7 +60,7 @@ else:
             st.markdown(message["content"])
 
     if prompt := st.chat_input("Enter your query"):
-        docs = vectorstore.similarity_search(query, 4)
+        docs = vectorstore.similarity_search(prompt, 4)
         system_content = f"""
         You are a helpful assistant performing Retrieval-augmented generation (RAG).
         You will be given a user query and some text. 
