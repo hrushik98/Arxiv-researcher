@@ -1,0 +1,16 @@
+# Single combined image runs both the Next.js frontend (:3000) and the
+# FastAPI backend (:8000). The papers/ scratch dir lives inside the container
+# (no volume), so it is created on startup and destroyed on `docker compose down`.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    env_file:
+      - ./backend/.env # GEMINI_API_KEY
+      - ./frontend/.env # NEON_DB_URL, JWT_SECRET, NEXT_PUBLIC_BACKEND_URL
+    restart: unless-stopped
+    stop_grace_period: 30s

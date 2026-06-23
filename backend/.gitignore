@@ -1,0 +1,7 @@
+.env*
+__pycache__/
+*.pyc
+papers/
+.venv/
+.pytest_cache/
+.vercel

@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@theme {
+  /* Material Design 3 — Surfaces */
+  --color-surface: #fcf9f8;
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #424752;
+  --color-surface-variant: #e5e2e1;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-surface-tint: #115cb9;
+  --color-inverse-surface: #313030;
+  --color-inverse-on-surface: #f3f0ef;
+  --color-inverse-primary: #acc7ff;
+
+  /* Primary */
+  --color-primary: #003f87;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #0056b3;
+  --color-on-primary-container: #bbd0ff;
+  --color-primary-fixed: #d7e2ff;
+  --color-primary-fixed-dim: #acc7ff;
+  --color-on-primary-fixed: #001a40;
+  --color-on-primary-fixed-variant: #004491;
+
+  /* Secondary */
+  --color-secondary: #545f72;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d5e0f7;
+  --color-on-secondary-container: #111c2c;
+  --color-secondary-fixed: #d8e3fa;
+  --color-secondary-fixed-dim: #bcc7dd;
+  --color-on-secondary-fixed: #111c2c;
+  --color-on-secondary-fixed-variant: #3c475a;
+
+  /* Tertiary */
+  --color-tertiary: #722b00;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ffdbcc;
+  --color-on-tertiary-container: #571900;
+  --color-tertiary-fixed: #ffdbcc;
+  --color-tertiary-fixed-dim: #ffb694;
+  --color-on-tertiary-fixed: #351000;
+  --color-on-tertiary-fixed-variant: #7b2f00;
+
+  /* Error */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* Outline */
+  --color-outline: #727784;
+  --color-outline-variant: #c2c6d4;
+
+  /* Font families */
+  --font-display: var(--font-eb-garamond), Georgia, serif;
+  --font-body: var(--font-source-serif-4), Georgia, serif;
+  --font-display-lg: var(--font-eb-garamond), Georgia, serif;
+  --font-display-lg-mobile: var(--font-eb-garamond), Georgia, serif;
+  --font-headline-lg: var(--font-eb-garamond), Georgia, serif;
+  --font-headline-md: var(--font-eb-garamond), Georgia, serif;
+  --font-headline-sm: var(--font-eb-garamond), Georgia, serif;
+  --font-body-lg: var(--font-source-serif-4), Georgia, serif;
+  --font-body-md: var(--font-source-serif-4), Georgia, serif;
+  --font-label-md: var(--font-inter), system-ui, sans-serif;
+  --font-label-sm: var(--font-inter), system-ui, sans-serif;
+
+  /* Font sizes */
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 56px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-lg-mobile: 32px;
+  --text-display-lg-mobile--line-height: 40px;
+  --text-display-lg-mobile--letter-spacing: -0.01em;
+  --text-display-lg-mobile--font-weight: 600;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--font-weight: 500;
+
+  --text-headline-md: 32px;
+  --text-headline-md--line-height: 40px;
+  --text-headline-md--font-weight: 500;
+
+  --text-headline-sm: 24px;
+  --text-headline-sm--line-height: 32px;
+  --text-headline-sm--font-weight: 500;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 500;
+
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.05em;
+  --text-label-sm--font-weight: 600;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.paper-grain {
+  background-color: #f6f3f2;
+  background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c2c6d4;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #727784;
+}
+
+.pdf-frame {
+  box-shadow: 0 4px 20px rgba(18, 18, 18, 0.05);
+}
+
+/* Cited lines flashed when a citation chip is clicked in the chat. */
+mark.pdf-citation-highlight {
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+  animation: citation-pulse 1.2s ease-out 2;
+}
+
+@keyframes citation-pulse {
+  0% {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* Mobile viewport fix */
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh !important;
+  }
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
