@@ -46,24 +46,27 @@ export default function HomeClient() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full max-w-xl flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://arxiv.org/abs/1706.03762"
-          className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-300"
-        />
+    <form onSubmit={onSubmit} className="w-full">
+      <div className="flex flex-col md:flex-row border border-outline focus-within:border-primary transition-all duration-500 bg-surface-container-lowest shadow-sm">
+        <div className="flex-1 flex items-center px-6 py-4">
+          <span className="material-symbols-outlined text-outline mr-4">link</span>
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://arxiv.org/abs/1706.03762"
+            className="bg-transparent border-none focus:outline-none text-on-surface w-full placeholder:text-outline/50"
+          />
+        </div>
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="bg-primary text-white px-10 py-5 text-xs font-semibold uppercase tracking-[0.2em] transition-all hover:bg-primary-container active:scale-[0.98] disabled:opacity-60"
         >
-          {loading ? "Starting…" : "Read paper"}
+          {loading ? "STARTING…" : "READ PAPER"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-error">{error}</p>}
     </form>
   );
 }

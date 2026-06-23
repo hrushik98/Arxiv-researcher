@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BACKEND_URL } from "@/lib/backend";
 
 type Citation = { page: number; section_path: string };
 type Message = {
@@ -12,17 +11,19 @@ type Message = {
 };
 
 export default function ChatPanel({
-  reqId,
+  messages,
+  loading,
+  onSendMessage,
   pendingHighlight,
   clearHighlight,
 }: {
-  reqId: string;
-  pendingHighlight: string | null;
+  messages: Message[];
+  loading: boolean;
+  onSendMessage: (message: string, highlight: string | null) => Promise<void>;
+  pendingHighlight: { text: string; pageNumber: number } | null;
   clearHighlight: () => void;
 }) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,92 +33,99 @@ export default function ChatPanel({
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const message = input.trim();
-    if (!message || loading) return;
+    if (!message && !pendingHighlight) return;
+    if (loading) return;
 
-    const highlight = pendingHighlight;
-    setMessages((m) => [...m, { role: "user", content: message, highlight: highlight ?? undefined }]);
     setInput("");
-    clearHighlight();
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ req_id: reqId, message, highlight }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessages((m) => [...m, { role: "assistant", content: data.detail || "Something went wrong." }]);
-      } else {
-        setMessages((m) => [...m, { role: "assistant", content: data.answer, citations: data.citations }]);
-      }
-    } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Could not reach the assistant." }]);
-    } finally {
-      setLoading(false);
-    }
+    const query = message || "Explain this passage";
+    await onSendMessage(query, pendingHighlight ? pendingHighlight.text : null);
   }
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-zinc-950">
-      <div className="border-b border-black/10 px-4 py-3 dark:border-white/10">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Assistant</h2>
+    <div className="flex h-full flex-col bg-surface-container-lowest text-on-surface border-l border-outline-variant">
+      <div className="p-6 border-b border-outline-variant flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>
+            history_edu
+          </span>
+          <h3 className="font-headline-md text-headline-md tracking-tight text-on-surface">AI Assistant</h3>
+        </div>
+        <button className="p-2 hover:bg-surface-container transition-colors rounded-full text-secondary">
+          <span className="material-symbols-outlined">more_vert</span>
+        </button>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto p-6 custom-scrollbar">
         {messages.length === 0 && (
-          <div className="mt-8 text-center text-sm text-zinc-400">
-            <p className="mb-1 font-medium text-zinc-500 dark:text-zinc-400">Ask anything about this paper.</p>
+          <div className="mt-8 text-center text-sm text-secondary font-label-sm">
+            <p className="mb-2 font-bold text-on-surface uppercase tracking-widest">Assistant Scroll</p>
+            <p className="mb-1">Ask anything about this paper.</p>
             <p>Or highlight text in the PDF and click ✨ Ask AI.</p>
           </div>
         )}
 
         {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
-            {m.highlight && (
-              <p className="mb-1 inline-block max-w-full truncate rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                “{m.highlight}”
-              </p>
-            )}
-            <div
-              className={`inline-block max-w-[90%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-                m.role === "user"
-                  ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-              }`}
-            >
-              {m.content}
-            </div>
-            {m.citations && m.citations.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {m.citations.map((c, j) => (
-                  <span
-                    key={j}
-                    className="rounded bg-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
-                    title={c.section_path}
-                  >
-                    p. {c.page}
-                  </span>
-                ))}
-              </div>
+          <div key={i} className={m.role === "user" ? "flex flex-col items-end" : "flex flex-col items-start"}>
+            {m.role === "user" ? (
+              <>
+                {m.highlight && (
+                  <blockquote className="border-l-2 border-primary-fixed bg-surface-container-low px-3 py-1.5 text-xs text-on-surface-variant italic mb-2 rounded-r-sm max-w-[85%] text-left">
+                    “{m.highlight}”
+                  </blockquote>
+                )}
+                <div className="bg-primary-container text-on-primary font-label-md text-sm rounded-xl px-4 py-3 max-w-[85%] text-left shadow-sm">
+                  {m.content}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-surface-container-low text-on-surface font-body-md text-sm rounded-xl px-4 py-3 max-w-[85%] text-left border border-outline-variant shadow-sm whitespace-pre-wrap">
+                  {m.content}
+                </div>
+                {m.citations && m.citations.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {m.citations.map((c, j) => (
+                      <span
+                        key={j}
+                        className="rounded bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[11px] font-label-sm uppercase tracking-wider transition-colors hover:bg-primary-container hover:text-on-primary cursor-help"
+                        title={c.section_path}
+                      >
+                        p. {c.page}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}
 
-        {loading && <div className="text-left text-sm text-zinc-400">Thinking…</div>}
-      </div>
-
-      <form onSubmit={send} className="border-t border-black/10 p-3 dark:border-white/10">
-        {pendingHighlight && (
-          <div className="mb-2 flex items-start gap-2 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-            <span className="line-clamp-2 flex-1">Asking about: “{pendingHighlight}”</span>
-            <button type="button" onClick={clearHighlight} className="font-bold">
-              ×
-            </button>
+        {loading && (
+          <div className="flex items-center gap-2 text-secondary font-label-sm">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-outline-variant border-t-primary-container" />
+            <span>Assistant is scanning scrolls…</span>
           </div>
         )}
-        <div className="flex items-end gap-2">
+      </div>
+
+      <div className="p-4 bg-surface-container-lowest border-t border-outline-variant">
+        <form onSubmit={send} className="border border-zinc-200 rounded-2xl p-4 bg-white shadow-sm flex flex-col gap-3 focus-within:border-zinc-400 transition-colors">
+          {pendingHighlight && (
+            <div className="border-l-2 border-amber-400 bg-amber-50/30 p-3 rounded-r-md text-xs relative flex items-start justify-between gap-4 select-none">
+              <div className="flex-1">
+                <span className="font-semibold text-zinc-500 block mb-0.5">Page {pendingHighlight.pageNumber}:</span>
+                <span className="text-zinc-600 block line-clamp-3 leading-relaxed">{pendingHighlight.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={clearHighlight}
+                className="text-zinc-400 hover:text-zinc-600 transition-colors text-[20px] leading-none px-1"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -128,18 +136,38 @@ export default function ChatPanel({
               }
             }}
             rows={2}
-            placeholder="Ask anything about this paper…"
-            className="flex-1 resize-none rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            placeholder="Ask anything about this paper or highlight text..."
+            className="w-full resize-none bg-transparent outline-none text-sm text-zinc-800 placeholder-zinc-400 min-h-[50px] font-sans"
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
-          >
-            Send
-          </button>
-        </div>
-      </form>
+
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-500 hover:bg-zinc-50 transition-colors"
+                title="Attach file"
+              >
+                <span className="material-symbols-outlined text-[18px]">attach_file</span>
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-rose-100 bg-rose-50/40 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px] text-rose-600">language</span>
+                <span>Search</span>
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || (!input.trim() && !pendingHighlight)}
+              className="w-9 h-9 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center text-white transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -49,3 +49,14 @@ export const sessionCookieOptions = {
   path: "/",
   maxAge: MAX_AGE_SECONDS,
 };
+
+export function getSessionCookieOptions(request: Request) {
+  const isSecure =
+    request.url.startsWith("https://") ||
+    request.headers.get("x-forwarded-proto") === "https";
+  return {
+    ...sessionCookieOptions,
+    secure: isSecure,
+  };
+}
+

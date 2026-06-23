@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getSql, type UserRow } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
-import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, getSessionCookieOptions } from "@/lib/session";
 
 export async function POST(request: Request) {
   let body: { email?: string; password?: string };
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   const token = await createSessionToken({ sub: user.id, email: user.email });
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions);
+  cookieStore.set(SESSION_COOKIE, token, getSessionCookieOptions(request));
 
   return Response.json({ user: { id: user.id, email: user.email } });
 }

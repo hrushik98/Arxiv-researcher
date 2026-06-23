@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getSql, type UserRow } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, getSessionCookieOptions } from "@/lib/session";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   const token = await createSessionToken({ sub: user.id, email: user.email });
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions);
+  cookieStore.set(SESSION_COOKIE, token, getSessionCookieOptions(request));
 
   return Response.json({ user: { id: user.id, email: user.email } }, { status: 201 });
 }
