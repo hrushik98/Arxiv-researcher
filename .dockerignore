@@ -1,0 +1,24 @@
+# Node / Next.js
+**/node_modules
+**/.next
+**/out
+**/build
+
+# Python
+**/.venv
+**/__pycache__
+**/*.pyc
+
+# Env & secrets (provide these at runtime instead)
+**/.env
+**/.env.*
+
+# VCS / editor / OS
+.git
+.gitignore
+**/.DS_Store
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
