@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from src.config import PAPERS_ROOT, pdf_path
+from src.llm.gemini import Attachment
 from src.rag import pipeline
 from src.services import ingest
 
@@ -40,6 +41,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,10 +53,18 @@ class IngestRequest(BaseModel):
     req_id: str
 
 
+class AttachmentPayload(BaseModel):
+    name: str = "attachment"
+    mime_type: str
+    data: str  # base64-encoded file bytes
+
+
 class ChatRequest(BaseModel):
     req_id: str
     message: str
     highlight: str | None = None
+    attachments: list[AttachmentPayload] | None = None
+    web_search: bool = False
 
 
 @app.get("/")
@@ -92,10 +102,23 @@ async def get_pdf(req_id: str):
 async def chat(payload: ChatRequest):
     if not ingest.is_ready(payload.req_id):
         raise HTTPException(status_code=409, detail="Paper is not ready yet")
+    attachments = [
+        Attachment(name=a.name, mime_type=a.mime_type, data=a.data)
+        for a in (payload.attachments or [])
+    ]
     result = await run_in_threadpool(
-        pipeline.chat, payload.req_id, payload.message, payload.highlight
+        pipeline.chat,
+        payload.req_id,
+        payload.message,
+        payload.highlight,
+        attachments,
+        payload.web_search,
     )
     return {
         "answer": result.answer,
-        "citations": [{"page": c.page, "section_path": c.section_path} for c in result.citations],
+        "citations": [
+            {"page": c.page, "section_path": c.section_path, "text": c.text}
+            for c in result.citations
+        ],
+        "web_sources": [{"title": s.title, "url": s.url} for s in result.web_sources],
     }

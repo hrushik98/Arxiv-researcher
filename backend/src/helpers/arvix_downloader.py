@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 import arxiv
+import requests
 
 _ARXIV_ID_RE = re.compile(r"(\d{4}\.\d{4,5})(v\d+)?")
 
@@ -30,5 +31,10 @@ def download_pdf(url: str, dest_dir: str | Path, filename: str = "paper.pdf") ->
 
     client = arxiv.Client()
     result = next(client.results(arxiv.Search(id_list=[arxiv_id])))
-    result.download_pdf(dirpath=str(dest_dir), filename=filename)
+    
+    response = requests.get(result.pdf_url)
+    response.raise_for_status()
+    with open(dest_dir / filename, "wb") as f:
+        f.write(response.content)
+        
     return result.title

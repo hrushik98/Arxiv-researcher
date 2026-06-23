@@ -20,6 +20,7 @@ load_dotenv(BACKEND_ROOT / ".env")
 
 # --- Secrets ---------------------------------------------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
 # --- Storage ---------------------------------------------------------------
 # Root for per-request temp dirs: papers/<req_id>/{paper.pdf, qdrant/}.

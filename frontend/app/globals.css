@@ -153,11 +153,42 @@
   box-shadow: 0 4px 20px rgba(18, 18, 18, 0.05);
 }
 
+/* Cited lines flashed when a citation chip is clicked in the chat. */
+mark.pdf-citation-highlight {
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+  animation: citation-pulse 1.2s ease-out 2;
+}
+
+@keyframes citation-pulse {
+  0% {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.45);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+/* Mobile viewport fix */
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh !important;
+  }
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
 }
 
 body {

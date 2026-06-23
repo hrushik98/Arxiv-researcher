@@ -34,11 +34,13 @@ def test_answer_builds_grounded_prompt(monkeypatch):
 
     assert out == "Answer using [p. 3]."
     assert sink["model"] == gemini.GEMINI_MODEL
+    # contents is a list whose first element is the grounded text prompt.
+    prompt = sink["contents"][0]
     # context, citation hint, highlight, and question all present in the prompt
-    assert "Attention maps queries to keys." in sink["contents"]
-    assert "p. 3" in sink["contents"]
-    assert "queries to keys" in sink["contents"]
-    assert "What is attention?" in sink["contents"]
+    assert "Attention maps queries to keys." in prompt
+    assert "p. 3" in prompt
+    assert "queries to keys" in prompt
+    assert "What is attention?" in prompt
     assert "research assistant" in sink["system"]
 
 
@@ -47,4 +49,59 @@ def test_answer_handles_no_candidates(monkeypatch):
     monkeypatch.setattr(gemini, "_client", lambda: _FakeClient(sink))
     out = gemini.answer("Anything?", [])
     assert out == "Answer using [p. 3]."
-    assert "no relevant context" in sink["contents"]
+    assert "no relevant context" in sink["contents"][0]
+
+
+def test_answer_includes_attachment_parts(monkeypatch):
+    import base64
+
+    sink = {}
+    monkeypatch.setattr(gemini, "_client", lambda: _FakeClient(sink))
+
+    raw = b"\x89PNG fake image bytes"
+    attachment = gemini.Attachment(
+        name="figure.png",
+        mime_type="image/png",
+        data=base64.b64encode(raw).decode(),
+    )
+    gemini.answer("Describe this", [], attachments=[attachment])
+
+    contents = sink["contents"]
+    # Prompt text first, then one inline file part with the decoded bytes.
+    assert "figure.png" in contents[0]
+    assert len(contents) == 2
+    assert contents[1].inline_data.data == raw
+    assert contents[1].inline_data.mime_type == "image/png"
+    # System instruction should switch to the attachment-aware variant.
+    assert "attached file" in sink["system"]
+
+
+def test_answer_first_pass_instructs_sentinel_on_miss(monkeypatch):
+    sink = {}
+    monkeypatch.setattr(gemini, "_client", lambda: _FakeClient(sink))
+    gemini.answer("Anything?", [])
+    assert gemini.WEB_SEARCH_SENTINEL in sink["system"]
+
+
+def test_answer_includes_web_results(monkeypatch):
+    sink = {}
+    monkeypatch.setattr(gemini, "_client", lambda: _FakeClient(sink))
+
+    web_results = [
+        gemini.WebResult(title="Recent survey", url="https://example.com/survey", content="A relevant snippet."),
+    ]
+    gemini.answer("What's the latest on this?", [], web_results=web_results)
+
+    prompt = sink["contents"][0]
+    assert "A relevant snippet." in prompt
+    assert "[web 1]" in prompt
+    assert "example.com/survey" in prompt
+    assert gemini.WEB_SEARCH_SENTINEL not in sink["system"]
+
+
+def test_answer_with_empty_web_results_falls_back_to_general_knowledge(monkeypatch):
+    sink = {}
+    monkeypatch.setattr(gemini, "_client", lambda: _FakeClient(sink))
+    gemini.answer("Anything?", [], web_results=[])
+    assert gemini.WEB_SEARCH_SENTINEL not in sink["system"]
+    assert "general knowledge" in sink["system"]

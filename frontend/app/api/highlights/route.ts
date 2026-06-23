@@ -51,3 +51,21 @@ export async function POST(request: Request) {
 
   return Response.json(rows[0]);
 }
+
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return Response.json({ error: "Missing id parameter" }, { status: 400 });
+  }
+
+  const sql = getSql();
+  await sql`DELETE FROM highlights WHERE id = ${id} AND user_id = ${user.sub}`;
+
+  return Response.json({ ok: true });
+}

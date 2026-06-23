@@ -35,8 +35,11 @@ def test_chat_success(monkeypatch):
     monkeypatch.setattr(
         pipeline,
         "chat",
-        lambda req_id, message, highlight=None: pipeline.ChatResult(
-            answer="ok", citations=[pipeline.Citation(page=2, section_path="2 Methods")]
+        lambda req_id, message, highlight=None, attachments=None, force_web_search=False: pipeline.ChatResult(
+            answer="ok",
+            citations=[
+                pipeline.Citation(page=2, section_path="2 Methods", text="The encoder is composed of N=6 layers.")
+            ],
         ),
     )
     with TestClient(main.app) as client:
@@ -44,7 +47,30 @@ def test_chat_success(monkeypatch):
         assert resp.status_code == 200
         body = resp.json()
         assert body["answer"] == "ok"
-        assert body["citations"] == [{"page": 2, "section_path": "2 Methods"}]
+        assert body["citations"] == [
+            {"page": 2, "section_path": "2 Methods", "text": "The encoder is composed of N=6 layers."}
+        ]
+        assert body["web_sources"] == []
+
+
+def test_chat_forwards_web_search_flag(monkeypatch):
+    monkeypatch.setattr(ingest, "is_ready", lambda req_id: True)
+    captured = {}
+
+    def fake_chat(req_id, message, highlight=None, attachments=None, force_web_search=False):
+        captured["force_web_search"] = force_web_search
+        return pipeline.ChatResult(
+            answer="ok",
+            citations=[],
+            web_sources=[pipeline.WebSource(title="Example", url="https://example.com")],
+        )
+
+    monkeypatch.setattr(pipeline, "chat", fake_chat)
+    with TestClient(main.app) as client:
+        resp = client.post("/chat", json={"req_id": "x", "message": "hi", "web_search": True})
+        assert resp.status_code == 200
+        assert captured["force_web_search"] is True
+        assert resp.json()["web_sources"] == [{"title": "Example", "url": "https://example.com"}]
 
 
 def test_ingest_seeds_status(monkeypatch):

@@ -45,11 +45,11 @@ function getNormalizedMapping(str: string) {
   return { normalized, indexMap };
 }
 
-// Clear custom highlights on a page
-function clearHighlights(pageElement: HTMLElement) {
+// Clear highlights of a given class on a page
+function clearHighlights(pageElement: HTMLElement, className = "pdf-highlight") {
   const textLayer = pageElement.querySelector(".textLayer");
   if (!textLayer) return;
-  const marks = textLayer.querySelectorAll("mark.pdf-highlight");
+  const marks = textLayer.querySelectorAll(`mark.${className}`);
   marks.forEach((mark) => {
     const parent = mark.parentNode;
     if (parent) {
@@ -60,8 +60,14 @@ function clearHighlights(pageElement: HTMLElement) {
   textLayer.normalize();
 }
 
-// Apply a single highlight substring matching to a page textLayer DOM
-function applyHighlight(textLayer: HTMLElement, highlightText: string, color: string) {
+// Apply a single highlight substring matching to a page textLayer DOM.
+// Returns the first <mark> element created (for scroll-into-view), or null if no match.
+function applyHighlight(
+  textLayer: HTMLElement,
+  highlightText: string,
+  color: string,
+  className = "pdf-highlight",
+): HTMLElement | null {
   const textNodes: Text[] = [];
   const walk = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
   let node: Node | null;
@@ -79,10 +85,10 @@ function applyHighlight(textLayer: HTMLElement, highlightText: string, color: st
 
   const { normalized, indexMap } = getNormalizedMapping(cumulativeText);
   const normQuery = highlightText.replace(/\s+/g, " ").trim().toLowerCase();
-  if (!normQuery) return false;
+  if (!normQuery) return null;
 
   const matchIndex = normalized.indexOf(normQuery);
-  if (matchIndex === -1) return false;
+  if (matchIndex === -1) return null;
 
   const origStart = indexMap[matchIndex];
   const origEnd = indexMap[matchIndex + normQuery.length - 1] + 1;
@@ -91,6 +97,7 @@ function applyHighlight(textLayer: HTMLElement, highlightText: string, color: st
     node: Text;
     replacement: Node[];
   }> = [];
+  let firstMark: HTMLElement | null = null;
 
   for (const r of ranges) {
     if (r.end <= origStart || r.start >= origEnd) {
@@ -117,9 +124,10 @@ function applyHighlight(textLayer: HTMLElement, highlightText: string, color: st
         mark.style.backgroundColor = color;
       }
       mark.style.color = "inherit";
-      mark.className = "pdf-highlight";
+      mark.className = className;
       mark.appendChild(document.createTextNode(highlightedText));
       replacement.push(mark);
+      if (!firstMark) firstMark = mark;
     }
     if (afterText) {
       replacement.push(document.createTextNode(afterText));
@@ -137,7 +145,26 @@ function applyHighlight(textLayer: HTMLElement, highlightText: string, color: st
     }
   }
 
-  return true;
+  return firstMark;
+}
+
+const CITATION_COLOR = "rgba(250, 204, 21, 0.85)"; // bright yellow for cited lines
+const CITATION_CLASS = "pdf-citation-highlight";
+
+// Best-effort match of a (possibly long) chunk against the rendered text layer.
+// Tries the full text first, then progressively shorter leading slices so that
+// extraction differences (hyphenation, ligatures) still produce a visible mark.
+function applyCitationHighlight(textLayer: HTMLElement, text: string): HTMLElement | null {
+  const attempts = [text];
+  const words = text.split(/\s+/);
+  if (words.length > 40) attempts.push(words.slice(0, 40).join(" "));
+  if (words.length > 20) attempts.push(words.slice(0, 20).join(" "));
+  if (words.length > 8) attempts.push(words.slice(0, 8).join(" "));
+  for (const attempt of attempts) {
+    const mark = applyHighlight(textLayer, attempt, CITATION_COLOR, CITATION_CLASS);
+    if (mark) return mark;
+  }
+  return null;
 }
 
 export default function PdfViewer({
@@ -146,14 +173,24 @@ export default function PdfViewer({
   onAddHighlight,
   onAskAI,
   onSelectionChange,
+  jumpToPage,
+  citationHighlight,
+  toolsHidden,
+  onToggleTools,
 }: {
   url: string;
   highlights: Highlight[];
   onAddHighlight: (text: string, note: string, color: string, pageNumber: number) => Promise<void>;
   onAskAI: (text: string, note: string, pageNumber: number) => Promise<void>;
   onSelectionChange: (text: string, pageNumber: number) => void;
+  jumpToPage?: { page: number; timestamp: number } | null;
+  citationHighlight?: { page: number; text: string; timestamp: number } | null;
+  toolsHidden?: boolean;
+  onToggleTools?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Currently active citation highlight text, so re-rendered pages can reapply it.
+  const citationRef = useRef<string | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [scale, setScale] = useState(1.2);
   const [width, setWidth] = useState<number | undefined>(undefined);
@@ -198,6 +235,63 @@ export default function PdfViewer({
     applyAllHighlights();
   }, [applyAllHighlights]);
 
+  useEffect(() => {
+    if (jumpToPage?.page) {
+      const pageEl = containerRef.current?.querySelector(
+        `.react-pdf__Page[data-page-number="${jumpToPage.page}"]`
+      );
+      if (pageEl) {
+        pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, [jumpToPage]);
+
+  // When a citation chip is clicked, scroll to its page and flash the cited
+  // lines in yellow. The text layer may not be painted yet, so retry briefly.
+  useEffect(() => {
+    if (!citationHighlight?.text) return;
+    const { page, text } = citationHighlight;
+    citationRef.current = text;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const tryHighlight = () => {
+      if (cancelled || !containerRef.current) return;
+      // Remove any previous citation highlights across all pages.
+      for (let p = 1; p <= numPages; p++) {
+        const el = containerRef.current.querySelector(
+          `.react-pdf__Page[data-page-number="${p}"]`
+        ) as HTMLElement | null;
+        if (el) clearHighlights(el, CITATION_CLASS);
+      }
+
+      const pageEl = containerRef.current.querySelector(
+        `.react-pdf__Page[data-page-number="${page}"]`
+      ) as HTMLElement | null;
+      const textLayer = pageEl?.querySelector(".textLayer") as HTMLElement | null;
+
+      if (pageEl && textLayer && textLayer.childNodes.length > 0) {
+        const mark = applyCitationHighlight(textLayer, text);
+        (mark ?? pageEl).scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
+      // Text layer not ready yet — scroll the page into view and retry.
+      if (pageEl && attempts === 0) {
+        pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      if (attempts++ < 20) {
+        setTimeout(tryHighlight, 150);
+      }
+    };
+
+    tryHighlight();
+    return () => {
+      cancelled = true;
+    };
+  }, [citationHighlight, numPages]);
+
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
     const text = selection?.toString().trim() ?? "";
@@ -220,18 +314,22 @@ export default function PdfViewer({
       node = node.parentNode;
     }
 
+    const container = containerRef.current;
+    if (!container) return;
     const rect = selection.getRangeAt(0).getBoundingClientRect();
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
+    const containerRect = container.getBoundingClientRect();
 
     // Reset notes
     setNote("");
     // Keep yellow as default selection
     setSelectedColor("rgba(255, 255, 141, 0.5)");
 
+    // The popover is positioned absolutely within the scrollable container, so
+    // coordinates are relative to the container's content origin — add the
+    // current scroll offset to the viewport-relative selection rect.
     setPopover({
-      x: rect.left - containerRect.left + rect.width / 2,
-      y: rect.top - containerRect.top,
+      x: rect.left - containerRect.left + container.scrollLeft + rect.width / 2,
+      y: rect.top - containerRect.top + container.scrollTop,
       text,
       pageNumber,
     });
@@ -289,9 +387,9 @@ export default function PdfViewer({
     <div
       ref={containerRef}
       onMouseUp={handleMouseUp}
-      className="relative w-full h-full p-8 overflow-y-auto custom-scrollbar flex flex-col items-center"
+      className="relative w-full h-full p-3 md:p-8 overflow-y-auto custom-scrollbar flex flex-col items-center"
     >
-      <div className="flex items-center justify-between w-full max-w-4xl mb-6 sticky top-0 bg-surface-bright/80 backdrop-blur-sm p-4 border border-outline-variant rounded-sm z-10 shadow-sm">
+      <div className="flex items-center justify-between w-full max-w-4xl mb-4 md:mb-6 sticky top-0 bg-surface-bright/80 backdrop-blur-sm p-2 md:p-4 border border-outline-variant rounded-sm z-10 shadow-sm">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setScale((s) => Math.max(0.6, s - 0.2))}
@@ -306,10 +404,24 @@ export default function PdfViewer({
           >
             <span className="material-symbols-outlined">zoom_in</span>
           </button>
+          {onToggleTools && (
+            <>
+              <div className="h-4 w-px bg-outline-variant"></div>
+              <button
+                onClick={onToggleTools}
+                className="flex items-center gap-2 px-2 py-1 hover:bg-surface-container transition-colors text-on-surface rounded-sm"
+                title="Toggle sidebar and AI chat (⌘ /)"
+              >
+                <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                <span className="font-label-sm text-label-sm">{toolsHidden ? "Show Tools" : "Hide Tools"}</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant">⌘ /</span>
+              </button>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4 text-on-surface">
-          <span className="font-label-sm text-label-sm">Page 1 of {numPages || "..."}</span>
-          <div className="h-4 w-px bg-outline-variant"></div>
+          <span className="font-label-sm text-label-sm hidden sm:inline">Page 1 of {numPages || "..."}</span>
+          <div className="h-4 w-px bg-outline-variant hidden sm:block"></div>
           <a
             href={url}
             download
@@ -319,7 +431,7 @@ export default function PdfViewer({
           </a>
           <button
             onClick={() => window.print()}
-            className="p-2 hover:bg-surface-container transition-colors text-on-surface"
+            className="p-2 hover:bg-surface-container transition-colors text-on-surface hidden sm:flex items-center justify-center"
           >
             <span className="material-symbols-outlined">print</span>
           </button>
@@ -343,6 +455,15 @@ export default function PdfViewer({
             onRenderSuccess={() => {
               setTimeout(() => {
                 applyAllHighlights();
+                // Reapply the active citation highlight on this page if it
+                // belongs here (the text layer was rebuilt by the re-render).
+                if (citationRef.current && citationHighlight?.page === i + 1) {
+                  const pageEl = containerRef.current?.querySelector(
+                    `.react-pdf__Page[data-page-number="${i + 1}"]`
+                  ) as HTMLElement | null;
+                  const textLayer = pageEl?.querySelector(".textLayer") as HTMLElement | null;
+                  if (textLayer) applyCitationHighlight(textLayer, citationRef.current);
+                }
               }, 100);
             }}
             className="pdf-frame border border-outline-variant bg-surface-container-lowest mb-12 shadow-lg"
@@ -354,13 +475,13 @@ export default function PdfViewer({
         <div
           style={{
             position: "absolute",
-            left: popover.x,
+            left: `clamp(1rem, ${popover.x}px, calc(100% - 1rem))`,
             top: Math.max(popover.y - 120, 8),
             transform: "translateX(-50%)",
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onMouseUp={(e) => e.stopPropagation()}
-          className="z-50 w-96 rounded-lg border border-zinc-200 bg-white shadow-xl flex flex-col pointer-events-auto text-zinc-800"
+          className="z-50 w-[calc(100vw-2rem)] sm:w-96 max-w-[384px] rounded-lg border border-zinc-200 bg-white shadow-xl flex flex-col pointer-events-auto text-zinc-800"
         >
           <textarea
             value={note}
@@ -410,7 +531,7 @@ export default function PdfViewer({
               >
                 <span className="material-symbols-outlined text-[16px] text-rose-600">border_color</span>
                 <span>Highlight</span>
-                <span className="text-[10px] text-zinc-400 font-normal ml-0.5">⌘↵</span>
+                <span className="text-[10px] text-zinc-400 font-normal ml-0.5 hidden sm:inline">⌘↵</span>
               </button>
               <button
                 type="button"
@@ -419,7 +540,7 @@ export default function PdfViewer({
               >
                 <span className="material-symbols-outlined text-[16px] text-rose-600">auto_awesome</span>
                 <span>Ask AI</span>
-                <span className="text-[10px] text-zinc-400 font-normal ml-0.5">↵</span>
+                <span className="text-[10px] text-zinc-400 font-normal ml-0.5 hidden sm:inline">↵</span>
               </button>
             </div>
           </div>
