@@ -36,12 +36,17 @@ origins = [
     "http://0.0.0.0",
     "http://0.0.0.0:3000",
     "http://0.0.0.0:8000",
+    # Local dev against the custom host ports used on the Raspberry Pi.
+    "http://localhost:3009",
+    "http://127.0.0.1:3009",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    # Vercel preview/prod plus the production frontend served via Cloudflare
+    # tunnel (paper.hrushik.com -> localhost:3009).
+    allow_origin_regex=r"https://.*\.(vercel\.app|hrushik\.com)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
