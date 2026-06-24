@@ -1,24 +1,28 @@
 /**
- * Password hashing (bcrypt) and the current-user helper.
- * Node runtime only (bcryptjs). Do not import from proxy.ts.
+ * Current-user helper, backed by Clerk.
+ *
+ * Returns the same `{ sub, email }` shape the app already relied on, so route
+ * handlers and pages keep working unchanged:
+ *   - `sub`   → Clerk user id (e.g. "user_2ab…"); used as the DB `user_id`.
+ *   - `email` → the user's primary email address.
  */
-import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE, verifySessionToken, type SessionPayload } from "@/lib/session";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
-const SALT_ROUNDS = 12;
+export type SessionUser = {
+  sub: string;
+  email: string;
+};
 
-export function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, SALT_ROUNDS);
-}
+/** Returns the signed-in user, or null when unauthenticated. */
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  const { userId } = await auth();
+  if (!userId) return null;
 
-export function verifyPassword(plain: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plain, hash);
-}
+  const user = await currentUser();
+  const email =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses[0]?.emailAddress ??
+    "";
 
-/** Reads and verifies the session cookie. Returns null when unauthenticated. */
-export async function getCurrentUser(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  return verifySessionToken(token);
+  return { sub: userId, email };
 }

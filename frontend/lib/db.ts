@@ -15,10 +15,3 @@ export function getSql(): NeonQueryFunction<false, false> {
   }
   return _sql;
 }
-
-export type UserRow = {
-  id: string;
-  email: string;
-  password_hash: string;
-  created_at: string;
-};

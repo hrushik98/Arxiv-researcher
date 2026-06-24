@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/auth";
 import HomeClient from "@/components/HomeClient";
-import LogoutButton from "@/components/LogoutButton";
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -26,7 +26,7 @@ export default async function Home() {
             Arxiv Researcher
           </div>
           <div className="flex items-center space-x-6">
-            <LogoutButton />
+            <UserButton />
           </div>
         </div>
       </header>

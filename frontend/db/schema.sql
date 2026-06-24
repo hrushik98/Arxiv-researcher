@@ -1,16 +1,10 @@
--- Auth schema. Email/password only; password is bcrypt-hashed before storage.
+-- Data schema. Authentication is handled by Clerk, so `user_id` holds the Clerk
+-- user id (a text string like "user_2ab…"), not a local users-table FK.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-CREATE TABLE IF NOT EXISTS users (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         text UNIQUE NOT NULL,
-  password_hash text NOT NULL,
-  created_at    timestamptz NOT NULL DEFAULT now()
-);
 
 CREATE TABLE IF NOT EXISTS highlights (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id       text NOT NULL,
   paper_id      text NOT NULL,
   text          text NOT NULL,
   note          text,
@@ -21,7 +15,7 @@ CREATE TABLE IF NOT EXISTS highlights (
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id       text NOT NULL,
   paper_id      text NOT NULL,
   role          text NOT NULL CHECK (role IN ('user', 'assistant')),
   content       text NOT NULL,
@@ -57,3 +51,13 @@ ALTER TABLE chat_messages ALTER COLUMN session_id SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages (user_id, paper_id, session_id, created_at);
 
+-- Clerk migration: existing databases had `user_id uuid REFERENCES users(id)`.
+-- Drop the FKs, widen the columns to text (so Clerk ids fit), and drop the now
+-- unused users table. All guarded so this is a no-op on a fresh install.
+-- NOTE: rows created under the old email/password users are NOT remapped to Clerk
+-- ids, so pre-migration highlights/chat history are effectively orphaned.
+ALTER TABLE highlights    DROP CONSTRAINT IF EXISTS highlights_user_id_fkey;
+ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_user_id_fkey;
+ALTER TABLE highlights    ALTER COLUMN user_id TYPE text USING user_id::text;
+ALTER TABLE chat_messages ALTER COLUMN user_id TYPE text USING user_id::text;
+DROP TABLE IF EXISTS users;

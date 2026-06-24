@@ -1,41 +1,31 @@
 /**
  * Next.js 16 "proxy" (formerly middleware). Runs before rendering.
- * Protects app routes: unauthenticated users are redirected to /login,
- * and authenticated users are kept away from /login and /signup.
- *
- * Only `jose` (edge-safe) is used here — no bcrypt, no DB.
+ * Clerk handles auth: unauthenticated users hitting a protected route are
+ * redirected to the sign-in page (NEXT_PUBLIC_CLERK_SIGN_IN_URL=/login), and
+ * protected API routes return 401.
  */
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const PUBLIC_PATHS = ["/login", "/signup"];
+// Page routes that must NOT force a redirect to sign-in:
+//   - the sign-in / sign-up flows themselves
+//   - API routes, which guard themselves via getCurrentUser() and must return
+//     JSON 401 (not an HTML redirect) so client fetch() calls don't break.
+// Clerk middleware still runs on these so `auth()` works inside the handlers.
+const isUnprotectedRoute = createRouteMatcher(["/login(.*)", "/signup(.*)", "/api(.*)"]);
 
-export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const session = await verifySessionToken(token);
-
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-
-  if (!session && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+export default clerkMiddleware(async (auth, request) => {
+  if (!isUnprotectedRoute(request)) {
+    await auth.protect();
   }
-
-  if (session && isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
-  // Run on everything except API routes, Next internals, and static assets.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    // Skip Next internals and static files, unless found in search params.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for Clerk's auto-proxy path.
+    "/__clerk/:path*",
+    // Always run for API routes.
+    "/(api|trpc)(.*)",
+  ],
 };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import { v4 as uuidv4 } from "uuid";
 import ChatPanel from "@/components/ChatPanel";
@@ -51,7 +51,7 @@ export default function PaperReader({
   reqId: string;
   userEmail: string;
 }) {
-  const router = useRouter();
+  const { signOut } = useClerk();
   const [state, setState] = useState<StatusResp | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<{ text: string; pageNumber: number } | null>(null);
 
@@ -260,9 +260,7 @@ export default function PaperReader({
   }
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    await signOut({ redirectUrl: "/login" });
   }
 
   return (

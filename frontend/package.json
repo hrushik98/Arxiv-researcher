@@ -9,9 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.5.8",
     "@neondatabase/serverless": "^1.1.0",
-    "bcryptjs": "^3.0.3",
-    "jose": "^6.2.3",
     "katex": "^0.17.0",
     "next": "16.2.9",
     "pdfjs-dist": "5.4.296",
@@ -22,7 +21,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
     "@types/katex": "^0.16.8",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -45,4 +43,3 @@
     "postcss": "^8.5.15"
   }
 }
-
