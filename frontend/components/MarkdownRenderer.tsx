@@ -189,7 +189,7 @@ export default function MarkdownRenderer({ content, onPageClick }: MarkdownRende
                 className="inline-math font-serif px-0.5"
               />
             );
-          } catch (e) {
+          } catch {
             return <code key={index} className="text-red-500 font-mono text-xs">${token.content}$</code>;
           }
         case "citation":
@@ -256,7 +256,7 @@ export default function MarkdownRenderer({ content, onPageClick }: MarkdownRende
                 className="my-3 overflow-x-auto select-all max-w-full text-center"
               />
             );
-          } catch (e) {
+          } catch {
             return (
               <pre key={idx} className="bg-red-50 text-red-500 p-2 rounded text-xs overflow-x-auto">
                 {"$$\n" + mathContent + "\n$$"}

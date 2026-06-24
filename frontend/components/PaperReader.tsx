@@ -249,7 +249,7 @@ export default function PaperReader({
           setSessionId(data.session_id);
         }
       }
-    } catch (err) {
+    } catch {
       setChatMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Could not reach the assistant." },

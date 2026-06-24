@@ -148,7 +148,7 @@ function applyHighlight(
   return firstMark;
 }
 
-const CITATION_COLOR = "rgba(250, 204, 21, 0.85)"; // bright yellow for cited lines
+const CITATION_COLOR = "rgba(250, 204, 21, 0.35)"; // soft yellow for cited lines, keeps text readable
 const CITATION_CLASS = "pdf-citation-highlight";
 
 // Best-effort match of a (possibly long) chunk against the rendered text layer.
